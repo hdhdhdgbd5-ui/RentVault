@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#ff6b9d">
+    <title>RentVault - Tenant Evidence Manager</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192x192.png">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #fff5f7 0%, #ffe4ec 100%); min-height: 100vh; color: #333; }
+        .container { max-width: 500px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; padding: 30px 0; }
+        .logo { font-size: 32px; font-weight: 800; color: #ff6b9d; margin-bottom: 5px; }
+        .tagline { color: #888; font-size: 14px; }
+        .property-section { background: white; border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(255,107,157,0.1); }
+        .section-title { font-size: 18px; font-weight: 700; margin-bottom: 15px; color: #ff6b9d; }
+        .room-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .room-btn { background: #fff0f3; border: 2px solid #ffd1dc; border-radius: 12px; padding: 15px; text-align: center; cursor: pointer; transition: all 0.3s; }
+        .room-btn:hover { background: #ff6b9d; color: white; transform: translateY(-2px); }
+        .room-btn.active { background: #ff6b9d; color: white; }
+        .upload-area { border: 3px dashed #ff6b9d; border-radius: 16px; padding: 40px; text-align: center; margin: 20px 0; background: #fff5f7; cursor: pointer; transition: all 0.3s; }
+        .upload-area:hover { background: #ffe4ec; }
+        .upload-area.dragover { background: #ffd1dc; }
+        .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 20px; }
+        .photo-item { position: relative; aspect-ratio: 1; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .photo-item img { width: 100%; height: 100%; object-fit: cover; }
+        .photo-timestamp { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: white; font-size: 10px; padding: 5px; }
+        .btn { background: #ff6b9d; color: white; border: none; border-radius: 12px; padding: 15px 30px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 15px; transition: all 0.3s; }
+        .btn:hover { background: #ff4785; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(255,107,157,0.3); }
+        .btn:disabled { background: #ccc; cursor: not-allowed; }
+        .note-input { width: 100%; border: 2px solid #ffd1dc; border-radius: 12px; padding: 12px; margin-top: 10px; font-family: inherit; resize: vertical; min-height: 80px; }
+        .note-input:focus { outline: none; border-color: #ff6b9d; }
+        .evidence-count { background: #ff6b9d; color: white; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .view-toggle { display: flex; gap: 10px; margin-bottom: 15px; }
+        .toggle-btn { flex: 1; padding: 10px; border: 2px solid #ffd1dc; background: white; border-radius: 10px; cursor: pointer; font-weight: 600; }
+        .toggle-btn.active { background: #ff6b9d; color: white; border-color: #ff6b9d; }
+        .hidden { display: none !important; }
+        .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+        .modal-content { background: white; border-radius: 20px; padding: 30px; max-width: 90%; max-height: 90vh; overflow-y: auto; width: 100%; }
+        .modal-img { width: 100%; border-radius: 12px; margin: 15px 0; }
+        .close-btn { position: absolute; top: 20px; right: 20px; background: white; border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 24px; cursor: pointer; }
+        #pdf-preview { width: 100%; min-height: 500px; border: 1px solid #ddd; border-radius: 12px; margin: 20px 0; }
+        .empty-state { text-align: center; padding: 40px; color: #888; }
+        .empty-state-icon { font-size: 48px; margin-bottom: 10px; }
+        .install-prompt { background: linear-gradient(135deg, #ff6b9d 0%, #ff4785 100%); color: white; padding: 15px 20px; border-radius: 16px; margin: 20px 0; text-align: center; }
+        .install-prompt button { background: white; color: #ff6b9d; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; margin-left: 10px; cursor: pointer; }
+        .date-badge { display: inline-block; background: #fff0f3; color: #ff6b9d; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-bottom: 10px; }
+        @media print { .no-print { display: none !important; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">🏠 RentVault</div>
+            <div class="tagline">Protect your security deposit</div>
+        </header>
+
+        <div id="install-section" class="install-prompt no-print">
+            📱 Add RentVault to your home screen for offline access!
+            <button onclick="installApp()">Install</button>
+        </div>
+
+        <div class="property-section">
+            <div class="section-title">🏢 Property Info</div>
+            <input type="text" id="property-address" class="note-input" placeholder="123 Main St, Apartment 4B" style="min-height: auto;">
+            <div class="date-badge">📅 Move-in Date</div>
+            <input type="date" id="move-in-date" class="note-input" style="min-height: auto;">
+        </div>
+
+        <div class="property-section no-print">
+            <div class="section-title">📸 Select Room</div>
+            <div class="room-grid">
+                <div class="room-btn active" data-room="living-room">🛋️ Living Room</div>
+                <div class="room-btn" data-room="bedroom">🛏️ Bedroom</div>
+                <div class="room-btn" data-room="kitchen">🍳 Kitchen</div>
+                <div class="room-btn" data-room="bathroom">🚿 Bathroom</div>
+                <div class="room-btn" data-room="hallway">🚪 Hallway</div>
+                <div class="room-btn" data-room="other">📦 Other</div>
+            </div>
+        </div>
+
+        <div class="property-section no-print">
+            <div class="section-title">📤 Upload Evidence</div>
+            <input type="file" id="file-input" accept="image/*" multiple capture="environment" style="display: none;">
+            <div class="upload-area" onclick="document.getElementById('file-input').click()" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                <div style="font-size: 48px; margin-bottom: 10px;">📷</div>
+                <div style="font-weight: 600; color: #ff6b9d; margin-bottom: 5px;">Tap to take photo or upload</div>
+                <div style="font-size: 12px; color: #888;">Supports: JPG, PNG, HEIC</div>
+            </div>
+            <textarea id="photo-note" class="note-input" placeholder="Add notes about this area (scratches, stains, damage, etc.)"></textarea>
+            <button class="btn" onclick="saveEvidence()" id="save-btn">💾 Save Evidence</button>
+        </div>
+
+        <div class="view-toggle no-print">
+            <div class="toggle-btn active" onclick="showGrid()">📷 Gallery <span class="evidence-count" id="total-count">0</span></div>
+            <div class="toggle-btn" onclick="showReport()">📋 Report</div>
+        </div>
+
+        <div id="gallery-view">
+            <div class="section-title">📸 Evidence Gallery</div>
+            <div id="photo-grid" class="photo-grid">
+                <div class="empty-state">
+                    <div class="empty-state-icon">📭</div>
+                    <div>No evidence yet.</div>
+                    <div style="font-size: 14px; margin-top: 5px;">Take photos of each room to protect your deposit!</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="report-view" class="hidden">
+            <div class="section-title">📋 Evidence Report</div>
+            <button class="btn" onclick="generatePDF()">📄 Generate PDF Report</button>
+            <div id="report-content"></div>
+        </div>
+
+        <div class="property-section no-print" style="margin-top: 30px;">
+            <div style="font-size: 12px; color: #888; text-align: center;">
+                💡 All photos are timestamped and stored locally on your device.<br>
+                Your data never leaves your phone unless you export it.
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
